@@ -26,6 +26,8 @@ export class AccountController {
     }
   }
 
+  
+
   static async authenticate(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
@@ -35,4 +37,18 @@ export class AccountController {
       res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
     }
   }
+
+  static async forgotPassword(req: Request, res: Response) {
+    try{
+      const { email } = req.body;
+      const result = await accountService.forgotPassword(email);
+      res.json(result);
+    
+  }catch (err) {
+    res.status(StatusCodes.BAD_REQUEST).json({ msg: `Invalid email` });
+  }
+    
 }
+  
+}
+
