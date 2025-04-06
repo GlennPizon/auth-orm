@@ -1,20 +1,31 @@
-import { AppDataSource } from "./data-source"
-import { User } from "./entity/User"
+import "reflect-metadata";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import initialize from "./data-source";
+import router from "./routes/user.routes";
 
-AppDataSource.initialize().then(async () => {
+dotenv.config();
 
-    console.log("Inserting a new user into the database...")
-    const user = new User()
-    user.firstName = "Timber"
-    user.lastName = "Saw"
-    user.age = 25
-    await AppDataSource.manager.save(user)
-    console.log("Saved a new user with id: " + user.id)
+const app = express();
+const PORT = parseInt(process.env.APP_PORT);
 
-    console.log("Loading users from the database...")
-    const users = await AppDataSource.manager.find(User)
-    console.log("Loaded users: ", users)
+// 🔹 Middlewares
+app.use(cors());
+app.use(express.json());
 
-    console.log("Here you can setup and run express / fastify / any other framework.")
+// 🔹 Routes
+app.use("/", router); // Use the imported router for all user-related routes
 
-}).catch(error => console.log(error))
+// 🔹 Initialize DB and Start Server
+
+async function start() {
+    await initialize();
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    console.log("Database initialized successfully.");
+    
+}
+
+start();
