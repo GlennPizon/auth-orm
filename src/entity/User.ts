@@ -1,18 +1,29 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm"
-
-@Entity()
-export class User {
-
-    @PrimaryGeneratedColumn()
-    id: number
-
+// src/entities/User.ts
+import {Entity, PrimaryColumn, Column} from "typeorm";
+  
+  @Entity()
+  export class User {
+    @PrimaryColumn(
+        {
+            type: "varchar"
+        }
+    )
+    id: string;
+  
+    @Column({ unique: true })
+    email: string;
+  
     @Column()
-    firstName: string
+    password: string;
+  
+    @Column({ default: false })
+    isVerified: boolean;
+  
+    @Column({ nullable: true })
+    verificationToken: string;
 
-    @Column()
-    lastName: string
+    @Column({ default: "User" })
+    role: "Admin" | "User";
 
-    @Column()
-    age: number
-
-}
+  }
+  
