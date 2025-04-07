@@ -8,9 +8,28 @@ const accountService = new AccountService();
 export class AccountController {
   static async register(req: Request, res: Response) {
     try {
-      const { email, password } = req.body;
-      const result = await accountService.register(email, password);
-      res.json(result);
+      const {
+        email,
+        password,
+        confirmPassword,
+        firstname,
+        lastname,
+        title,
+        acceptTerms
+      } = req.body;
+
+      const result = await accountService.register(
+        email,
+        password,
+        confirmPassword,
+        firstname,
+        lastname,
+        title,
+        acceptTerms
+      );
+
+      res.status(StatusCodes.CREATED).json(result);
+      
     } catch (err) {
       res.status(StatusCodes.BAD_REQUEST).json(err);
     }
@@ -35,4 +54,16 @@ export class AccountController {
       res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
     }
   }
+
+  static async deleteAccount(req: Request, res: Response) {
+    try {
+      const { email, password } = req.body;
+      const result = await accountService.deleteAccount(email, password);
+      res.json(result);
+    } catch (err) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
+    }
+  }
+
+
 }

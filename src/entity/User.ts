@@ -9,21 +9,31 @@ import {Entity, PrimaryColumn, Column} from "typeorm";
         }
     )
     id: string;
-  
-    @Column({ unique: true })
-    email: string;
-  
+
     @Column()
-    password: string;
-  
-    @Column({ default: false })
-    isVerified: boolean;
-  
-    @Column({ nullable: true })
-    verificationToken: string;
+  title: string;
 
-    @Column({ default: "User" })
-    role: "Admin" | "User";
+  @Column()
+  firstname: string;
 
-  }
-  
+  @Column()
+  lastname: string;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
+  @Column()
+  acceptTerms: boolean;
+
+  @Column({ default: false })
+  isVerified: boolean;
+
+  @Column({ nullable: true })
+  verificationToken: string;
+
+  @Column({ default: "User" })
+  role: "Admin" | "User";
+}
