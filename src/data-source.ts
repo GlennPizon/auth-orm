@@ -10,7 +10,7 @@ dotenv.config();
 const dbhost: string = process.env.DB_HOST;
 const dbport: number = parseInt(process.env.DB_PORT); // 🔹 Ensure port is a number
 const dbuser: string = process.env.DB_USER ;
-const dbpassword: string = process.env.DB_PASS;
+const dbpassword: string = process.env.DB_PASS || ""; // 👈 fallback to empty string
 const dbname: string = process.env.DB_NAME;
 
 // ✅ Define TypeORM DataSource
