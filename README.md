@@ -4,12 +4,16 @@ Project Overview
 The group will develop a User Management System with the following features:
 
 Backend (Node.js + MySQL):
+
 Email sign-up and verification.
 JWT authentication with refresh tokens.
 Role-based authorization (Admin and User roles).
 Forgot password and reset password functionality.
 CRUD operations for managing accounts (restricted to Admin users).
+
+
 Frontend (Angular 10/17):
+
 Email sign-up and verification.
 JWT authentication with refresh tokens.
 Role-based authorization (Admin and User roles).
