@@ -34,5 +34,9 @@
       "dev": "ts-node-dev --respawn --pretty src/index.ts",
       "start": "ts-node src/index.ts",
       "typeorm": "typeorm-ts-node-commonjs"
-   }
+   },
+   "main": "index.js",
+   "keywords": [],
+   "author": "",
+   "license": "ISC"
 }
