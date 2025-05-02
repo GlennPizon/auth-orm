@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import initialize from "./data-source";
 import router from "./routes/user.routes";
 import swaggerRouter from "./utils/swagger";
+import  errorHandler from "./middleware/error-handler";
+import { Response, Request, NextFunction } from "express";
 
 dotenv.config();
 
@@ -13,7 +15,7 @@ const PORT = parseInt(process.env.APP_PORT);
 
 // 🔹 Middlewares
 app.use(cors());
-app.use(express.json());
+
 
 // 🔹 Routes
 app.use("/", router); // Use the imported router for all user-related routes
@@ -25,6 +27,9 @@ app.use(swaggerRouter);
 
 async function start() {
     await initialize();
+    app.use( (req: Request, res: Response, next: NextFunction) => {
+        errorHandler(req, res, next);
+    });
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
     });
