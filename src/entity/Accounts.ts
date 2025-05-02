@@ -1,12 +1,14 @@
 // src/entities/User.ts
-import {Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn} from "typeorm";
+import {Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany} from "typeorm";
 import {Role} from '../utils/role';
+import { RefreshToken } from "./RefreshToken";
   
   @Entity()
   export class Accounts {
     @PrimaryColumn(
         {
-            type: "varchar"
+            type: "varchar",
+            length: 36
         }
     )
     id: string;
@@ -18,7 +20,7 @@ import {Role} from '../utils/role';
     passwordHash: string;
 
     @Column({type: 'varchar'})
-    title;
+    title: string;
     
     @Column({type: 'varchar', nullable:false })
     firstName: string;
@@ -37,6 +39,9 @@ import {Role} from '../utils/role';
 
     @Column({type: 'date'})
     verified: Date;
+
+    @OneToMany(() => RefreshToken, (token) => token.accounts)
+    refreshToken: RefreshToken[]
 
     @Column({type: 'varchar', nullable: true })
     resetToken: string;
