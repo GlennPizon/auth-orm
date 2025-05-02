@@ -1,6 +1,6 @@
 import {
     Entity,
-    PrimaryGeneratedColumn,
+    PrimaryColumn,
     Column,
     ManyToOne
   } from "typeorm";
@@ -8,7 +8,10 @@ import {
   
   @Entity('refreshToken')
   export class RefreshToken {
-    @PrimaryGeneratedColumn('uuid')
+    @PrimaryColumn({
+        type: 'varchar',
+        length: 36,
+    })
     id: string;
   
     @Column({ type: 'varchar' })
