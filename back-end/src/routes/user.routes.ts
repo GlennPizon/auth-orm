@@ -4,7 +4,7 @@ import { AccountController } from "../controller/user.controller";
 
 const router = Router();
 
-router.post("/register", AccountController.register);
+router.post("/register",AccountController.register);
 router.get("/verify-email", AccountController.verifyEmail);
 router.post("/authenticate", AccountController.authenticate);
 

@@ -1,12 +1,12 @@
 // src/service/account.service.ts
 import { AppDataSource } from "../data-source";
-import { User } from "../entity/User";
+import { Accounts, } from "../entity/Accounts";
 import bcrypt from "bcryptjs";
 import { v4 as random } from "uuid";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/send-email";
 import dotenv from "dotenv";
-import { Roles } from "../utils/role";
+import { Role } from "../utils/role";
 
 dotenv.config();
 
@@ -14,15 +14,15 @@ const jwtSecret = process.env.JWT_SECRET as string;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "1h";
 
 export class AccountService {
-  private userRepo = AppDataSource.getRepository(User);
+  private userRepo = AppDataSource.getRepository(Accounts);
 
   async register(
+    title: string,
+    firstname: string,
+    lastname: string,
     email: string,
     password: string,
     confirmPassword: string,
-    firstname: string,
-    lastname: string,
-    title: string,
     acceptTerms: boolean
   ): Promise<{ message: string }> {
     
@@ -59,25 +59,29 @@ export class AccountService {
       throw new Error("Email already exists");
     }
   
-    const hashedPassword = await bcrypt.hash(password, 10);
+    //salt
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
     const verificationToken = random();
     const userCount = await this.userRepo.count();
-    const role = userCount === 0 ? Roles.Admin : Roles.User;
+    const role = userCount === 0 ? Role.Admin : Role.User;
     const id = random(); // Or use uuid()
-  
-    const newUser = this.userRepo.create({
-      id,
-      email,
-      password: hashedPassword,
-      firstname,
-      lastname,
-      title,
-      acceptTerms,
-      verificationToken,
-      role,
-    });
+    const token = random();
+
+    const newUser = new Accounts();
+    newUser.id = id;
+    newUser.title = title;
+    newUser.firstName = firstname;
+    newUser.lastName = lastname;
+    newUser.email = email;
+    newUser.passwordHash = hashedPassword;
+    newUser.accepTerms = acceptTerms;
+    newUser.role = role;
+    newUser.verificationToken = token;
+    
   
     await this.userRepo.save(newUser);
+    
   
     const link = `http://localhost:${process.env.APP_PORT}/verify-email?token=${verificationToken}`;
     await sendEmail(email, "Verify your Email", `Click to verify your email: <a href="${link}">${link}</a>`);
@@ -91,12 +95,9 @@ export class AccountService {
     if (!user) {
       throw new Error("Invalid or expired token");
     }
-
     // Set the user as verified
-    user.isVerified = true;
+    user.verified = new Date(); // Set the current date as verified date
 
-    // Optionally, clear the verification token after successful verification
-    user.verificationToken = null;
 
     // Save the updated user object
     await this.userRepo.save(user);
@@ -115,7 +116,7 @@ export class AccountService {
       throw new Error("Invalid email");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       throw new Error("Incorrect password");
     }
@@ -140,7 +141,7 @@ export class AccountService {
       throw new Error("Invalid email or email not verified");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       throw new Error("Incorrect password");
     }
