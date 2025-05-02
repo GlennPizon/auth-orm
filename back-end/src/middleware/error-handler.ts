@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
   if (typeof err === 'string') {
     // Custom application error
     const is404 = err.toLowerCase().endsWith('not found');
@@ -17,3 +17,5 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   console.error('Unhandled Error:', err);
   return res.status(500).json({ message: 'Internal Server Error' });
 }
+
+export default errorHandler;

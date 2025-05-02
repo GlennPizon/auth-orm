@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import initialize from "./data-source";
 import router from "./routes/user.routes";
 import swaggerRouter from "./utils/swagger";
-import  errorHandler from "./middleware/error-handler";
+import errorHandler from "./middleware/error-handler";
 import { Response, Request, NextFunction } from "express";
 
 dotenv.config();
@@ -27,8 +27,8 @@ app.use(swaggerRouter);
 
 async function start() {
     await initialize();
-    app.use( (req: Request, res: Response, next: NextFunction) => {
-        errorHandler(req, res, next);
+    app.use( (err: any,req: Request, res: Response, next: NextFunction) => {
+        errorHandler(err, req, res, next);
     });
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
