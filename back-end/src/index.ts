@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import initialize from "./data-source";
 import router from "./routes/user.routes";
+import swaggerRouter from "./utils/swagger";
 
 dotenv.config();
 
@@ -16,6 +17,9 @@ app.use(express.json());
 
 // 🔹 Routes
 app.use("/", router); // Use the imported router for all user-related routes
+
+//swagger 
+app.use(swaggerRouter);
 
 // 🔹 Initialize DB and Start Server
 
