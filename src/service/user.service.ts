@@ -1,6 +1,6 @@
 // src/service/account.service.ts
 import { AppDataSource } from "../data-source";
-import { User } from "../entity/User";
+import { User } from "../entity/Accounts";
 import bcrypt from "bcryptjs";
 import { v4 as random } from "uuid";
 import jwt from "jsonwebtoken";

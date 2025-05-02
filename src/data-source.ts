@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { User } from "./entity/User";
+import { User } from "./entity/Accounts";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
