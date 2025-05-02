@@ -40,7 +40,7 @@ import { RefreshToken } from "./RefreshToken";
     @Column({type: 'date'})
     verified: Date;
 
-    @OneToMany(() => RefreshToken, (token) => token.accounts)
+    @OneToMany(() => RefreshToken, (token) => token.account)
     refreshToken: RefreshToken[]
 
     @Column({type: 'varchar', nullable: true })
