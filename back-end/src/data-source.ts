@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { User } from "./entity/User";
+import { Accounts } from "./entity/Accounts";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
@@ -23,7 +23,7 @@ export const AppDataSource = new DataSource({
     database: dbname,
     synchronize: true, // 🔹 Auto-create tables
     logging: false,
-    entities: [User],
+    entities: [Accounts],
     migrations: [],
     subscribers: [],
 });

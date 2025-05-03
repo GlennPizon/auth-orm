@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendEmail(to: string, subject: string, html: string) {
   const info = await transporter.sendMail({
-    from: `"MyApp" <${process.env.SMTP_USER}>`,
+    from: `"Group-G" <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
