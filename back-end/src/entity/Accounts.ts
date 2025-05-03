@@ -29,7 +29,7 @@ import { RefreshToken } from "./RefreshToken";
     lastName: string;
 
     @Column({type: 'boolean', nullable:false })
-    accepTerms: boolean;
+    acceptTerms: boolean;
 
     @Column({type: 'varchar', default: Role.User})
     role: Role;

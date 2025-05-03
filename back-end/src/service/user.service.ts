@@ -14,6 +14,7 @@ dotenv.config();
 
 const jwtSecret = process.env.JWT_SECRET as string;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "1h";
+const from = process.env.SMTP_USER as string;
 
 export class AccountService {
   private userRepo = AppDataSource.getRepository(Accounts);
@@ -92,7 +93,7 @@ export class AccountService {
     newUser.lastName = lastname;
     newUser.email = email;
     newUser.passwordHash = hashedPassword;
-    newUser.accepTerms = acceptTerms;
+    newUser.acceptTerms = acceptTerms;
     newUser.role = role;
     newUser.verificationToken = token;
     
@@ -122,42 +123,45 @@ export class AccountService {
 
     return { message: "Account deleted successfully." };
   }
+ 
+  async authenticate(
+    email: string,
+    password: string,
+    ipAddress: string
+  ): Promise<any> {
   
- async authenticate(email: string, password: string, ipAddress: string):Promise<{ id: string; email: string; jwtToken: string; refreshToken: string }> {
-    
-  // Validate input
     const accountRepository = AppDataSource.getRepository(Accounts);
-
     const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
-
-    // Find user in the database
-    const account = await accountRepository.findOne({ where: { email }, select: ['id', 'email', 'passwordHash', 'isVerified'] });
-
+  
+    const account = await accountRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'passwordHash', 'isVerified', 'title', 'firstName', 'lastName', 'role', 'created', 'updated'],
+    });
+  
     if (!account || !account.isVerified || !(await bcrypt.compare(password, account.passwordHash))) {
-        throw new Error('Email or password is incorrect');
+      throw new Error('Email or password is incorrect');
     }
-
-    // Generate JWT and refresh token
-    const jwtToken = await generateJwtToken(account);
-    const refreshToken = await generateRefreshToken(account, ipAddress);
-
-    // Save refresh token
+  
+    const jwtToken = await this.generateJwtToken(account);
+    const refreshToken = await this.generateRefreshToken(account, ipAddress);
+  
     await refreshTokenRepository.save(refreshToken);
-
-    // Return account details and tokens
+  
+    const userDetails = await this.basicDetails(account);
+  
     return {
-        id: account.id,
-        email: account.email,
-        jwtToken,
-        refreshToken: refreshToken.token
+      ...userDetails,
+      jwtToken,
+      refreshToken: refreshToken.token,
     };
-}
+  }
+  
 
 async verifyEmail(token: string): Promise<{ message: string }> {
   const account = await this.userRepo.findOneBy({ verificationToken: token });
 
   if (!account) {
-    throw new Error("Verificaton Faile");
+    throw new Error("Verificaton Failed");
   }
 
   account.verified = new Date(); // Set the current date as verified date
@@ -175,11 +179,11 @@ async forgotPassword(email: string, origin ): Promise<{ message: string }> {
     throw new Error("Email not found");
   }
 
-  account.resetToken = await randomTokenString();
+  account.resetToken = await this.randomTokenString();
   account.resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour from now
   await this.userRepo.save(account);
 
-  await sendPasswordResetEmail(account.email, origin);
+  await this.sendPasswordResetEmail(account, origin);
   return { message: "Password reset email sent" };
 
 }
@@ -211,53 +215,57 @@ async resetPassword(token: string, password: string): Promise<{ message: string 
 
 async getAll(){
   const account = await this.userRepo.find();
-  return account.map(x => basicDetails(x));
+  return account.map(x => this.basicDetails(x));
 }
 
 async getbyId(id: string){
   const account = await this.userRepo.findOneBy({id});
-  return basicDetails(account);
+  return this.basicDetails(account);
 }
 
 
- async create(params: { email: string; password: string }): Promise<Accounts> {
-    const accountRepository = AppDataSource.getRepository(Accounts);
-
+ async create(params:Accounts): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
+   
     // Validate if email already exists
-    if (await accountRepository.findOne({ where: { email: params.email } })) {
+    if (await this.userRepo.findOne({ where: { email: params.email } })) {
         throw new Error(`Email "${params.email}" is already registered`);
     }
-
+ 
     // Create account entity
-    const account = new Accounts();
-    account.email = params.email;
-    account.passwordHash = await bcrypt.hash(params.password, 10); // Secure password hashing
-    account.verified = new Date(); // Mark account as verified
+    const newAccount = new Accounts();
+    newAccount.id = crypto.randomUUID(); // Ensures unique ID
+    newAccount.title = params.title;
+    newAccount.firstName = params.firstName;
+    newAccount.lastName = params.lastName;
+    newAccount.email = params.email;
+    newAccount.passwordHash = await this.hash(params.passwordHash); // Ensure hashing
+    newAccount.acceptTerms = params.acceptTerms; // Fix typo
+    newAccount.role = params.role;
+    newAccount.verificationToken = crypto.randomUUID();
+    newAccount.verified = new Date();
+    newAccount.created = new Date();
+    newAccount.updated = new Date();
+
 
     // Save account to the database
-    await accountRepository.save(account);
+    await this.userRepo.save(newAccount);
 
-    // Return essential account details
-    return basicDetails(account);
+    return this.basicDetails(newAccount);
 }
 
 
-async update(id: string, params: { email?: string; password?: string }): Promise<Accounts> {
-  const accountRepository = AppDataSource.getRepository(Accounts);
-
+async update(id: string, params: { email?: string; password?: string }): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
+  
   // Find the account by ID
-  const account = await accountRepository.findOneBy({ id });
+  const account = await this.userRepo.findOneBy({ id });
   if (!account) {
     throw new Error("Account not found");
   }
 
   // Update email if provided and different from current email
-  if (params.email && params.email !== account.email) {
-    const existingAccount = await accountRepository.findOneBy({ email: params.email });
-    if (existingAccount) {
-      throw new Error("Email already exists");
-    }
-    account.email = params.email;
+  if (params.email && params.email !== account.email &&await this.userRepo.findOneBy({ email: params.email })) {
+    throw new Error("Email already exists");
+    
   }
 
   // Update password if provided
@@ -265,24 +273,32 @@ async update(id: string, params: { email?: string; password?: string }): Promise
     account.passwordHash = await bcrypt.hash(params.password, 10); // Secure password hashing
   }
 
+  //copy params to account
+  Object.assign(account, params);
+  account.updated = new Date(); // Update the updated date
+
+
   // Save updated account to the database
-  await accountRepository.save(account);
+  await this.userRepo.save(account);
 
   return this.basicDetails(account);
 }
 
 
+async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
+  if (!account) throw new Error("Account not found");
 
-basicDetails(account: Accounts) {
+  const { id, title, firstName, lastName, email, role, created, updated } = account;
+
   return {
-    id: account.id,
-    email: account.email,
-    title: account.title,
-    firstName: account.firstName,
-    lastName: account.lastName,
-    role: account.role,
-    created: account.created,
-    updated: account.updated
+    id,
+    email,
+    title,
+    firstName,
+    lastName,
+    role,
+    created,
+    updated
   };
 }
 
@@ -318,10 +334,12 @@ basicDetails(account: Accounts) {
     return await bcrypt.hash(password, salt);
   }
 
-async generateJwtToken(account: Accounts): Promise<string> {
+async generateJwtToken(account: Accounts): Promise<{token: string}> {
     const payload = { sub: account.id, id: account.id};
-    jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
-  }
+    jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });  
+    const token = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
+    return {token};
+}
 
   async generateRefreshToken(account: Accounts, ipAddress: string): Promise<RefreshToken> {
     const newToken = new RefreshToken();
@@ -346,34 +364,45 @@ async generateJwtToken(account: Accounts): Promise<string> {
     }
 
     else{
-      message = `Click to verify your email: <a href="http://localhost:${process.env.APP_PORT}/verify-email?token=${account.verificationToken}">Verify Email</a>`;
+      message = `
+      <p>Please use the below token to verify your email with the <code>/verify-email</code> api route:</p>
+      <p><code>${account.verificationToken}</code></p>
+      `;
 
     }
 
-    await sendEmail({
-      to: account.email,
-      subject: "Verify your email",
-      text: message,
-      html: `<h4>Verify Email</h4><p>${message}</p>`,
-    });
-  }
+    await sendEmail(
+      account.email,
+      "Sign-Up verification Api-Verify Email",
+      `<h4>Verify your Email</h4>
+      <p>Thank you for registering. Please verify your email address to complete your registration.</p>
+      <p>${message}</p>`,
+      from
 
+    );
+
+  }
 
   async sendAlreadyRegisteredEmail(email: string, origin: string): Promise<void> {
     let message;
   
     if (origin) {
-      message = `Click to reset your password: <a href="${origin}/reset-password">Reset Password</a>`;
+      message = `
+        If you don't know your password, please use the below token to reset your password with the <code>/forgot-password</code> api route:
+      `
     } else {
-      message = `Click to reset your password: <a href="http://localhost:${process.env.APP_PORT}/reset-password">Reset Password</a>`;
+      message = `Click to reset your password: <a href="/forgot-password">Reset Password</a>`;
     }
 
-    await sendEmail({
-      to: email,
-      subject: "Password Reset",
-      text: message,
-      html: `<h4>Password Reset</h4><p>${message}</p>`,
-    });
+    await sendEmail(
+      email,
+      "Sign Up Verification API - Email Already Registered", 
+      `<h4>Email Already Registered</h4>
+      <p>Your ${email} is already registered.}</p>
+      <p>${message}</p>`,
+      from
+    );
+
 
   }
 
@@ -382,25 +411,34 @@ async generateJwtToken(account: Accounts): Promise<string> {
 
       if (origin) {
         const resetUrl = `${origin}/reset-password?token=${account.resetToken}`;
-        message = `Click to reset your password: <a href="${resetUrl}">${resetUrl}</a>`;
+        message = `Click to reset your password: the link below is valid for 1 hour: <br>
+                  <a href="${resetUrl}">${resetUrl}</a>`;
 
       }
 
       else {
-        message = `Click to reset your password: <a href="http://localhost:${process.env.APP_PORT}/reset-password?token=${account.resetToken}">Reset Password</a>`;
+        message = `Click to reset your password: with the <code>/reset-password</code> api route: <br>
+                  <p>Use the below token to reset your password:</p>
+                  <p><code>${account.resetToken}</code></p>`
         
       }
 
-      await sendEmail({
-        to: account.email,
-        subject: "Password Reset",
-        text: message,
-        html: `<h4>Password Reset</h4><p>${message}</p>`,
-      });
+      await sendEmail(
+        account.email,
+        "Sign Up Verification API - Password Reset",
+        `<h4>Password Reset Email</h4>
+        <p>${message}</p>`,
+        from
+      );
+
+
+
     }
+  }
+
+     
 
 
-}
 
 
 
