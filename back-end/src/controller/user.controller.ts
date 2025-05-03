@@ -18,6 +18,8 @@ export class AccountController {
         acceptTerms
       } = req.body;
 
+      const origin: string = "http://localhost:" + process.env.APP_PORT;
+
       const result = await accountService.register(
         email,
         password,
@@ -25,9 +27,9 @@ export class AccountController {
         firstname,
         lastname,
         title,
-        acceptTerms
+        acceptTerms,
+        origin
       );
-
       res.status(StatusCodes.CREATED).json(result);
       
     } catch (err) {
@@ -47,8 +49,8 @@ export class AccountController {
 
   static async authenticate(req: Request, res: Response) {
     try {
-      const { email, password } = req.body;
-      const result = await accountService.authenticate(email, password);
+      const { email, password, ipAddress } = req.body;
+      const result = await accountService.authenticate(email, password,ipAddress);
       res.json(result);
     } catch (err) {
       res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
@@ -62,6 +64,64 @@ export class AccountController {
       res.json(result);
     } catch (err) {
       res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
+    }
+  }
+
+  static async getAllAccounts(req: Request, res: Response) {
+    try {
+      const result = await accountService.getAll();
+      res.json(result);
+    } catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
+    }
+  }
+
+
+  static async getAccountById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const result = await accountService.getbyId(id);
+      res.json(result);
+    } catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
+    }
+  }
+
+  static async updateAccount(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { email, password, firstname, lastname, title } = req.body;
+      const result = await accountService.updateAccount(
+        id,
+        email,
+        password,
+        firstname,
+        lastname,
+        title
+      );
+      res.json(result);
+    } catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
+    }
+  }
+
+  static async createAccount(req: Request, res: Response) {
+    try {
+      const {title, firstName, lastName, email, password, confirmPassword, acceptTerms} = req.body;
+      const result = await accountService.create({
+        title,
+        firstName,
+        lastName,
+        email,
+        password,
+        confirmPassword,
+        acceptTerms
+      }
+      );
+      
+      res.json(result);
+    } catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
     }
   }
 

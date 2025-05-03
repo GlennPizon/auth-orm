@@ -25,3 +25,6 @@ router.delete("/:id", authorize(), AccountController.deleteAccount);
 
 
 export default router;
+
+
+
