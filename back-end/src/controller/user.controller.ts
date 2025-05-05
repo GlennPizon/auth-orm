@@ -18,16 +18,17 @@ export class AccountController {
         acceptTerms
       } = req.body;
 
-      const origin: string = "http://localhost:" + process.env.APP_PORT;
-
+      const origin: string = req.get("origin");
       const result = await accountService.register(
+        {
         email,
         password,
         confirmPassword,
         firstname,
         lastname,
         title,
-        acceptTerms,
+        acceptTerms
+        },
         origin
       );
       res.status(StatusCodes.CREATED).json(result);
@@ -49,7 +50,8 @@ export class AccountController {
 
   static async authenticate(req: Request, res: Response) {
     try {
-      const { email, password, ipAddress } = req.body;
+      const { email, password} = req.body;
+      const ipAddress = req.ip;
       const result = await accountService.authenticate(email, password,ipAddress);
       res.json(result);
     } catch (err) {
@@ -90,14 +92,13 @@ export class AccountController {
   static async updateAccount(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { email, password, firstname, lastname, title } = req.body;
-      const result = await accountService.updateAccount(
+      const { email, password} = req.body;
+      const result = await accountService.update(
         id,
-        email,
-        password,
-        firstname,
-        lastname,
-        title
+        {email,
+          password}
+        
+        
       );
       res.json(result);
     } catch (err) {
@@ -124,6 +125,43 @@ export class AccountController {
       res.status(StatusCodes.BAD_REQUEST).json(err);
     }
   }
+
+
+   static async forgotPassword(req: Request, res: Response) {
+      try {
+        const { email } = req.body;
+        const origin: string = req.get("origin");
+        const result = await accountService.forgotPassword(email, origin);
+        res.json(result);
+      } catch (err) {
+        res.status(StatusCodes.BAD_REQUEST).json(err);
+      }
+    }
+
+  static  async resetPassword(req: Request, res: Response) {
+      try {
+        const { token, password } = req.body;
+        const result = await accountService.resetPassword(token, password);
+        res.json(result);
+      } catch (err) {
+        res.status(StatusCodes.BAD_REQUEST).json(err);
+      }
+    }
+
+    static async refreshToken(req: Request, res: Response) {
+      try {
+        const { token } = req.cookies.refreshToken;
+        const ipAddress = req.ip;
+
+        const result = await accountService.refreshToken(token, ipAddress);
+        res.json(result);
+      } catch (err) {
+        res.status(StatusCodes.BAD_REQUEST).json(err);
+      }
+    }
+
+
+
 
 
 }

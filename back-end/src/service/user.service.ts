@@ -16,10 +16,10 @@ const jwtSecret = process.env.JWT_SECRET as string;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "1h";
 const from = process.env.SMTP_USER as string;
 
+
 export class AccountService {
   private userRepo = AppDataSource.getRepository(Accounts);
   private refreshTokenRepo = AppDataSource.getRepository(RefreshToken);
-
 
 
   async revokeToken(token: string, ipAddress: string): Promise<void> {
@@ -32,15 +32,17 @@ export class AccountService {
     await this.refreshTokenRepo.save(refreshToken);
   } 
 
-  async register(
-    title: string,
-    firstname: string,
-    lastname: string,
-    email: string,
-    password: string,
-    confirmPassword: string,
-    acceptTerms: boolean,
+  async register({
+    email,
+    password,
+    confirmPassword,
+    firstname,
+    lastname,
+    title,
+    acceptTerms,
+  },
     origin: string
+    
   ): Promise<{ message: string }> {
     
     if (!acceptTerms) {
@@ -224,12 +226,21 @@ async getbyId(id: string){
 }
 
 
- async create(params:Accounts): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
+ async create(params: any): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
    
     // Validate if email already exists
     if (await this.userRepo.findOne({ where: { email: params.email } })) {
         throw new Error(`Email "${params.email}" is already registered`);
     }
+    let pass;
+    if(params.password === params.confirmPassword && params.password !== null && params.confirmPassword !== null){
+      const salt = await bcrypt.genSalt(10);
+      pass = await bcrypt.hash(params.password, salt); // Hash the password
+    }else{
+      throw new Error("Password and Confirm Password do not match");
+    }
+
+    
  
     // Create account entity
     const newAccount = new Accounts();
@@ -238,9 +249,9 @@ async getbyId(id: string){
     newAccount.firstName = params.firstName;
     newAccount.lastName = params.lastName;
     newAccount.email = params.email;
-    newAccount.passwordHash = await this.hash(params.passwordHash); // Ensure hashing
+    newAccount.passwordHash = pass;
     newAccount.acceptTerms = params.acceptTerms; // Fix typo
-    newAccount.role = params.role;
+    newAccount.role = Role.User; // Default role
     newAccount.verificationToken = crypto.randomUUID();
     newAccount.verified = new Date();
     newAccount.created = new Date();
@@ -434,6 +445,7 @@ async generateJwtToken(account: Accounts): Promise<{token: string}> {
 
 
     }
+
   }
 
      
