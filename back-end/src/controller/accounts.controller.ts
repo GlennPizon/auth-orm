@@ -1,6 +1,6 @@
 // src/accounts/account.controller.ts
 import { Request, Response } from "express";
-import { AccountService } from "../service/user.service";
+import { AccountService } from "../service/accounts.service";
 import { StatusCodes } from "http-status-codes";
 import { Role } from "../utils/role";
 import { authorize } from "../middleware/authorize";
@@ -153,6 +153,7 @@ export class AccountController {
       }
     }
 
+  
     static async refreshToken(req: Request, res: Response) {
       try {
         const { token } = req.cookies.refreshToken;

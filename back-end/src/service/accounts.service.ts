@@ -33,27 +33,7 @@ export class AccountService {
   } 
 
   
-  async refreshToken(token: string, ipAddress: string): Promise<{ jwtToken: string; refreshToken: string }> {
-    const refreshToken = await this.refreshTokenRepo.findOneBy({
-      token,
-      expires: MoreThan(new Date()),
-    });
-    if (!refreshToken) {
-      throw new Error("Invalid refresh token");
-    }
-    const account = await this.userRepo.findOneBy({ id: refreshToken.account.id });
-    if (!account) {
-      throw new Error("Account not found");
-    }
-    const newRefreshToken = await this.generateRefreshToken(account, ipAddress);
-    await this.refreshTokenRepo.save(newRefreshToken);
-    const jwtToken = await this.generateJwtToken(account);
-    return { jwtToken: jwtToken.token, refreshToken: newRefreshToken.token };
-  }
-
-
-
-  async register2({
+  async register({
     email,
     password,
     confirmPassword,
@@ -151,7 +131,7 @@ export class AccountService {
     email: string,
     password: string,
     ipAddress: string
-  ): Promise<any> {
+  ): Promise<void> {
   
     const accountRepository = AppDataSource.getRepository(Accounts);
     const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
@@ -380,12 +360,11 @@ async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | '
     return await bcrypt.hash(password, salt);
   }
 
-  async generateJwtToken(account: Accounts): Promise<{ token: string }> { 
-    return jwt.sign({ sub: account.id, role: account.role }, jwtSecret as jwt.Secret, {
-      expiresIn: jwtExpiresIn,
-    });
+  async generateJwtToken(account: Accounts): Promise<string> {
+    const { id, email, title, firstName, lastName, role } = account;
+    const payload = { id, email, title, firstName, lastName, role };
+    return jwt.sign(payload, jwtSecret, { expiresIn: 1 * 60 * 60 }); // 1 hour
   }
-
 
 
   async generateRefreshToken(account: Accounts, ipAddress: string): Promise<RefreshToken> {
@@ -477,9 +456,28 @@ async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | '
         <p>${message}</p>`,
         from
       );
+    }
 
 
-
+    async refreshToken(token: string, ipAddress: string): Promise<any> {
+      const refreshToken = await this.refreshTokenRepo.findOne({
+        where: { token },
+        relations: ["account"],
+      });
+      if (!refreshToken || !refreshToken.isActive) {
+        throw new Error("Invalid refresh token");
+      }
+      const account = refreshToken.account;
+      const newRefreshToken = await this.generateRefreshToken(account, ipAddress);
+      refreshToken.revoked = new Date();
+      refreshToken.revokedByIp = ipAddress;
+      await this.refreshTokenRepo.save([refreshToken, newRefreshToken]);
+      const jwtToken = await this.generateJwtToken(account);
+      return {
+        ...this.basicDetails(account),
+        jwtToken,
+        refreshToken: newRefreshToken.token,
+      };
     }
 
   }

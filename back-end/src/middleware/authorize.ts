@@ -1,33 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Accounts } from '../entity/Accounts';
-import { AppDataSource } from '../data-source';
+import { Role } from '../utils/role';
+import dotenv from 'dotenv';
 
-declare global {
-  namespace Express {
-    interface Request {
-      account?: Accounts;
-    }
+dotenv.config();
+
+const jwtSecret = process.env.JWT_SECRET as string;
+
+export function authorize(roles: Role[] = []) {
+  if (typeof roles === 'string') {
+    roles = [roles as Role];
   }
-}
 
-export const authorize = (roles: string[] = []) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
-      if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  return (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { accountId: string };
-      const account = await AppDataSource.getRepository(Accounts).findOneBy({ id: decoded.accountId });
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
 
-      if (!account || (roles.length && !roles.includes(account.role))) {
-        return res.status(403).json({ message: 'Forbidden' });
+    jwt.verify(token, jwtSecret, (err, decoded: any) => {
+      if (err) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid token' });
       }
 
-      req.account = account;
+      // Check if roles are defined in the decoded token
+      if (!decoded || !decoded.role) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid token payload' });
+      }
+
+      // Check if the user's role is authorized
+      if (roles.length && !roles.includes(decoded.role)) {
+        return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+      }
+
+      // Attach the decoded user information to the request object
+      (req as any).user = decoded;
       next();
-    } catch (err) {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
+    });
   };
-};
+}
