@@ -1,53 +1,46 @@
-import {
-    Entity,
-    PrimaryColumn,
-    Column,
-    ManyToOne
-  } from "typeorm";
-  import { Accounts } from "./Accounts";
-  
-  @Entity('refreshToken')
-  export class RefreshToken {
-    @PrimaryColumn({
-        type: 'varchar',
-        length: 36,
-    })
-    id: string;
-  
-    @Column({ type: 'varchar' })
-    token: string;
-  
-    @Column()
-    expires: Date;
-  
-    @Column()
-    created: Date;
-  
-    @Column({ type: 'varchar' })
-    createdByIp: string;
-  
-    @Column({ type: 'date', nullable: true })
-    revoked: Date;
-  
-    @Column({ type: 'varchar', nullable: true })
-    revokedByIp: string;
-  
-    @Column({ type: 'varchar', nullable: true })
-    replacedByToken: string;
-  
-    @ManyToOne(() => Accounts, (account) => account.refreshToken, {
-      onDelete: 'CASCADE',
-    })
-    account: Accounts;
-  
-    get isExpired(): boolean {
-      return new Date() >= this.expires;
-    }
-  
-    get isActive(): boolean {
-      return !this.revoked && !this.isExpired;
-    }
-  }
-  
+import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from "typeorm";
+import { Accounts } from "./Accounts";
 
-  export default RefreshToken;
+@Entity('refresh_tokens')
+export class RefreshToken {
+  @PrimaryColumn({
+    type: 'varchar',
+    length: 36
+  })
+  id: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  token: string;
+
+  @Column({ type: 'datetime' })
+  expires: Date;
+
+  @CreateDateColumn({ type: 'datetime' })
+  created: Date;
+
+  @Column({ type: 'varchar', length: 50 })
+  createdByIp: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  revoked: Date | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  revokedByIp: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  replacedByToken: string | null;
+
+  @ManyToOne(() => Accounts, (account) => account.refreshTokens, {
+    onDelete: 'CASCADE'
+  })
+  @JoinColumn({ name: 'account_id' })
+  account: Accounts;
+
+  get isExpired(): boolean {
+    return new Date() >= this.expires;
+  }
+
+  get isActive(): boolean {
+    return !this.revoked && !this.isExpired;
+  }
+}

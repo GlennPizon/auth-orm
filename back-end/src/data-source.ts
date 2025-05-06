@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { Accounts } from "./entity/Accounts";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
-import RefreshToken from "./entity/RefreshToken";
+import {RefreshToken} from "./entity/RefreshToken";
 
 dotenv.config();
 
