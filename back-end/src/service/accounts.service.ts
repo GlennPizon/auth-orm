@@ -32,7 +32,28 @@ export class AccountService {
     await this.refreshTokenRepo.save(refreshToken);
   } 
 
-  async register({
+  
+  async refreshToken(token: string, ipAddress: string): Promise<{ jwtToken: string; refreshToken: string }> {
+    const refreshToken = await this.refreshTokenRepo.findOneBy({
+      token,
+      expires: MoreThan(new Date()),
+    });
+    if (!refreshToken) {
+      throw new Error("Invalid refresh token");
+    }
+    const account = await this.userRepo.findOneBy({ id: refreshToken.account.id });
+    if (!account) {
+      throw new Error("Account not found");
+    }
+    const newRefreshToken = await this.generateRefreshToken(account, ipAddress);
+    await this.refreshTokenRepo.save(newRefreshToken);
+    const jwtToken = await this.generateJwtToken(account);
+    return { jwtToken: jwtToken.token, refreshToken: newRefreshToken.token };
+  }
+
+
+
+  async register2({
     email,
     password,
     confirmPassword,
@@ -230,6 +251,9 @@ async getbyId(id: string){
    
     // Validate if email already exists
     if (await this.userRepo.findOne({ where: { email: params.email } })) {
+      // If email already exists, send an email to the user
+      await this.sendAlreadyRegisteredEmail(params.email, params.origin);
+      // Throw an error to indicate that the email is already registered
         throw new Error(`Email "${params.email}" is already registered`);
     }
     let pass;
@@ -240,11 +264,21 @@ async getbyId(id: string){
       throw new Error("Password and Confirm Password do not match");
     }
 
-    
+    let id: string = random(); // Generate a random ID for the new account
+    // Check if the ID already exists in the database and generate a new one if it does
+    while (await this.userRepo.findOne({ where: { id } })) {
+      id = random();
+    }
+
+    let verificationToken = random(); // Generate a random verification token
+    // Check if the verification token already exists in the database and generate a new one if it does
+    while (await this.userRepo.findOne({ where: { verificationToken } })) {
+      verificationToken = random();
+
  
     // Create account entity
     const newAccount = new Accounts();
-    newAccount.id = crypto.randomUUID(); // Ensures unique ID
+    newAccount.id = id
     newAccount.title = params.title;
     newAccount.firstName = params.firstName;
     newAccount.lastName = params.lastName;
@@ -252,7 +286,7 @@ async getbyId(id: string){
     newAccount.passwordHash = pass;
     newAccount.acceptTerms = params.acceptTerms; // Fix typo
     newAccount.role = Role.User; // Default role
-    newAccount.verificationToken = crypto.randomUUID();
+    newAccount.verificationToken = verificationToken; // Set the verification token
     newAccount.verified = new Date();
     newAccount.created = new Date();
     newAccount.updated = new Date();
@@ -263,6 +297,7 @@ async getbyId(id: string){
 
     return this.basicDetails(newAccount);
 }
+ }
 
 
 async update(id: string, params: { email?: string; password?: string }): Promise<Pick<Accounts, 'id' | 'email' | 'title' | 'firstName' | 'lastName' | 'role' | 'created' | 'updated'>> {
@@ -345,12 +380,13 @@ async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | '
     return await bcrypt.hash(password, salt);
   }
 
-async generateJwtToken(account: Accounts): Promise<{token: string}> {
-    const payload = { sub: account.id, id: account.id};
-    jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });  
-    const token = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
-    return {token};
-}
+  async generateJwtToken(account: Accounts): Promise<{ token: string }> { 
+    return jwt.sign({ sub: account.id, role: account.role }, jwtSecret as jwt.Secret, {
+      expiresIn: jwtExpiresIn,
+    });
+  }
+
+
 
   async generateRefreshToken(account: Accounts, ipAddress: string): Promise<RefreshToken> {
     const newToken = new RefreshToken();

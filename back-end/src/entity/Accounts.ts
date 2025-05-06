@@ -58,6 +58,7 @@ import { RefreshToken } from "./RefreshToken";
     @UpdateDateColumn({type: 'date', default: () => 'CURRENT_TIMESTAMP'})
     updated: Date;
 
+    
     get isVerified(): boolean {
       return !!this.verified || !!this.passwordReset
     }

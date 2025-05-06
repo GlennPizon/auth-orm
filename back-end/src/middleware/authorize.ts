@@ -1,62 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
-import { expressjwt as jwt } from 'express-jwt';
-import dotenv from 'dotenv';
-import { AppDataSource } from '../data-source'; // your TypeORM data source
+import jwt from 'jsonwebtoken';
 import { Accounts } from '../entity/Accounts';
-import { RefreshToken } from '../entity/RefreshToken';
+import { AppDataSource } from '../data-source';
 
-dotenv.config();
-// Extend Express's Request interface
-interface AuthenticatedRequest extends Request {
-    user?: {
-      id: string;
-      role?: string;
-      ownsToken?: boolean;
-    };
-  }
-  
-  // Authorization middleware
-  export function authorize(roles: string[] | string = []) {
-    if (typeof roles === 'string') {
-      roles = [roles];
+declare global {
+  namespace Express {
+    interface Request {
+      account?: Accounts;
     }
-  
-    return [
-      // Authenticate JWT and attach `req.user`
-      jwt({
-        secret: process.env.JWT_SECRET as string,
-        algorithms: ['HS256'],
-      }),
-  
-      // Authorize user by role and check token ownership
-      async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-        const accountRepo = AppDataSource.getRepository(Accounts);
-  
-        try {
-          const account = await accountRepo.findOne({
-            where: { id: req.user!.id },
-            relations: ['refreshTokens'],
-          });
-  
-          if (!account || (roles.length && !roles.includes(account.role))) {
-            return res.status(401).json({ message: 'Unauthorized' });
-          }
-  
-          // Set authenticated user info
-          req.user!.role = account.role;
-  
-          // Find the token from the Authorization header
-          const authHeader = req.headers.authorization || '';
-          const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '';
-  
-          // Check token ownership
-          req.user!.ownsToken = !!account.refreshToken?.find(rt => rt.token === token);
-  
-          next();
-        } catch (err) {
-          console.error('Authorization Error:', err);
-          res.status(401).json({ message: 'Unauthorized' });
-        }
-      },
-    ];
   }
+}
+
+export const authorize = (roles: string[] = []) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
+      if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { accountId: string };
+      const account = await AppDataSource.getRepository(Accounts).findOneBy({ id: decoded.accountId });
+
+      if (!account || (roles.length && !roles.includes(account.role))) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      req.account = account;
+      next();
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+  };
+};
