@@ -10,3 +10,4 @@ const swaggerRouter = Router();
 swaggerRouter.use('/', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 export default swaggerRouter;
+

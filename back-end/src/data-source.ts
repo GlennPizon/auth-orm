@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { Accounts } from "./entity/Accounts";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
+import RefreshToken from "./entity/RefreshToken";
 
 dotenv.config();
 
@@ -23,7 +24,7 @@ export const AppDataSource = new DataSource({
     database: dbname,
     synchronize: true, // 🔹 Auto-create tables
     logging: false,
-    entities: [Accounts],
+    entities: [Accounts, RefreshToken],
     migrations: [],
     subscribers: [],
 });

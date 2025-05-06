@@ -3,9 +3,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import initialize from "./data-source";
-import router from "./routes/user.routes";
+import router from "./routes/accounts.routes";
 import swaggerRouter from "./utils/swagger";
-import errorHandler from "./middleware/error-handler";
+import { errorHandler } from "./middleware/error-handler";
 import { Response, Request, NextFunction } from "express";
 
 dotenv.config();

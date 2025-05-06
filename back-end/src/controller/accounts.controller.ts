@@ -166,6 +166,28 @@ export class AccountController {
       }
     }
 
+  static async revokeToken(req: Request, res: Response) {
+    try {
+      const token = req.body.token || req.cookies.refreshToken;
+      const ipAddress = req.ip;
+      const result = await accountService.revokeToken(token, ipAddress);
+      res.json(result);
+    }
+    catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
+    }
+  }
+
+  static async validateResetToken(req: Request, res: Response) {
+    try {
+      const { token } = req.body;
+      const result = await accountService.validateResetToken(token);
+      res.json(result);
+    }
+    catch (err) {
+      res.status(StatusCodes.BAD_REQUEST).json(err);
+    }
+  }
 
 
 

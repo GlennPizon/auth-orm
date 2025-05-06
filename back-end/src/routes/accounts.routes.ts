@@ -1,7 +1,7 @@
 // src/accounts/account.routes.ts
 import { Router } from "express";
-import { AccountController } from "../controller/user.controller";
-import { authorize } from "../middleware/authorize";
+import { AccountController } from "../controller/accounts.controller";
+import {authorize}  from "../middleware/authorize";
 import { Role } from "../utils/role";
 import { validate } from '../middleware/validate-request';
 import Joi from "joi";
@@ -13,7 +13,6 @@ const router = Router();
 
 router.post("/authenticate", validate(authenticateSchema), AccountController.authenticate);
 router.post("/refresh-token", AccountController.refreshToken);
-router.post("/logout", AccountController.logout);
 router.post("/revoke-token", authorize(), AccountController.revokeToken);  // Fixed: Added missing slash
 router.post("/register", validate(registerSchema), AccountController.register);
 router.get("/verify-email", validate(verifyEmailSchema), AccountController.verifyEmail);
@@ -25,5 +24,6 @@ router.get("/:id", authorize(), AccountController.getAccountById);
 router.post("/", authorize(Role.Admin), validate(createAccountSchema), AccountController.createAccount);
 router.put("/:id", authorize(), validate(updateAccountSchema), AccountController.updateAccount);
 router.delete("/:id", authorize(), AccountController.deleteAccount);
+
 export default router;
 

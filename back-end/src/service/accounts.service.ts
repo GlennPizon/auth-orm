@@ -127,39 +127,28 @@ export class AccountService {
     return { message: "Account deleted successfully." };
   }
  
-  async authenticate(
-    email: string,
-    password: string,
-    ipAddress: string
-  ): Promise<void> {
-  
-    const accountRepository = AppDataSource.getRepository(Accounts);
-    const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
-  
-    const account = await accountRepository.findOne({
-      where: { email },
-      select: ['id', 'email', 'passwordHash', 'isVerified', 'title', 'firstName', 'lastName', 'role', 'created', 'updated'],
-    });
-  
-    if (!account || !account.isVerified || !(await bcrypt.compare(password, account.passwordHash))) {
-      throw new Error('Email or password is incorrect');
-    }
-  
-    const jwtToken = await this.generateJwtToken(account);
-    const refreshToken = await this.generateRefreshToken(account, ipAddress);
-  
-    await refreshTokenRepository.save(refreshToken);
-  
-    const userDetails = await this.basicDetails(account);
-  
-    return {
-      ...userDetails,
-      jwtToken,
-      refreshToken: refreshToken.token,
-    };
+async authenticate(email: string, password: string, ipAddress: string): Promise<any>{
+  const user = await this.userRepo.findOneBy({ email });
+  if (!user) {
+    throw new Error("Invalid email or password");
   }
-  
 
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!isMatch) {
+    throw new Error("Invalid email or password");
+  }
+
+  const refreshToken = await this.generateRefreshToken(user, ipAddress);
+  await this.refreshTokenRepo.save(refreshToken);
+
+  const jwtToken = await this.generateJwtToken(user);
+
+  return {
+    ...this.basicDetails(user),
+    jwtToken,
+    refreshToken: refreshToken.token,
+  };
+}
 async verifyEmail(token: string): Promise<{ message: string }> {
   const account = await this.userRepo.findOneBy({ verificationToken: token });
 
@@ -481,7 +470,6 @@ async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | '
     }
 
   }
-
      
 
 
