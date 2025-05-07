@@ -1,6 +1,8 @@
 import Joi from "joi";
+import {validate} from '../middleware/validate-request'
+import { Request, Response } from "express";
 
-export const registerSchema = Joi.object({
+ export const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   confirmPassword: Joi.any().valid(Joi.ref('password')).required().messages({
@@ -71,6 +73,7 @@ export const getAllAccountsSchema = Joi.object({
 export const getAccountByEmailSchema = Joi.object({
   email: Joi.string().email().required()
 });
+
 
 
 

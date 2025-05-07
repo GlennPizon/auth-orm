@@ -9,6 +9,7 @@ import { sendEmail } from "../utils/send-email";
 import dotenv from "dotenv";
 import { Role } from "../utils/role";
 import { MoreThan } from "typeorm";
+import { AccountController } from "../controller/accounts.controller";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ export class AccountService {
   } 
 
   
+  
   async register({
     email,
     password,
@@ -40,10 +42,7 @@ export class AccountService {
     firstname,
     lastname,
     title,
-    acceptTerms,
-  },
-    origin: string
-    
+    acceptTerms},origin
   ): Promise<{ message: string }> {
     
     if (!acceptTerms) {
@@ -83,7 +82,7 @@ export class AccountService {
     //salt
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const verificationToken = random();
+    
     const userCount = await this.userRepo.count();
     const role = userCount === 0 ? Role.Admin : Role.User;
     const id = random(); // Or use uuid()
@@ -102,9 +101,9 @@ export class AccountService {
     
   
     await this.userRepo.save(newUser);
-    
+            
   
-    const link = `http://localhost:${process.env.APP_PORT}/verify-email?token=${verificationToken}`;
+    const link = `${origin}/verify-email?token=${token}`;
     //await sendEmail(email, "Verify your Email", `Click to verify your email: <a href="${link}">${link}</a>`);
     await this.sendVerificationEmail(newUser, origin);
     return { message: "Registration successful, check your email to verify." };
@@ -375,7 +374,8 @@ async basicDetails(account: Accounts): Promise<Pick<Accounts, 'id' | 'email' | '
 
     if(origin){
       const verifyUrl = `${origin}/verify-email?token=${account.verificationToken}`;
-      message = `Click to verify your email: <a href="${verifyUrl}">${verifyUrl}</a>`;
+      message = `Click to verify your email: <a href="${verifyUrl}">${verifyUrl}</a>
+      <p><code>${account.verificationToken}</code></p>`;
     }
 
     else{

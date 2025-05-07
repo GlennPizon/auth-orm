@@ -6,42 +6,27 @@ import { Role } from "../utils/role";
 import { authorize } from "../middleware/authorize";
 import { validate } from "../middleware/validate-request";
 import Joi from "joi";
+import { Accounts } from "../entity/Accounts";
+import { RefreshToken } from "../entity/RefreshToken";
 
 
 const accountService = new AccountService();
 
+
 export class AccountController {
+  
   static async register(req: Request, res: Response) {
     try {
-      const {
-        email,
-        password,
-        confirmPassword,
-        firstname,
-        lastname,
-        title,
-        acceptTerms
-      } = req.body;
-
-      const origin: string = req.get("origin");
-      const result = await accountService.register(
-        {
-        email,
-        password,
-        confirmPassword,
-        firstname,
-        lastname,
-        title,
-        acceptTerms
-        },
-        origin
-      );
+      const { email, password, confirmPassword, firstname, lastname, title, acceptTerms } = req.body;
+      const origin:string = req.headers.origin || `http://localhost:${process.env.APP_PORT}`;
+      const result = await accountService.register({ email, password, confirmPassword, firstname, lastname, title, acceptTerms }, origin);
       res.status(StatusCodes.CREATED).json(result);
-      
-    } catch (err) {
-      res.status(StatusCodes.BAD_REQUEST).json(err);
+    } catch (err: any) {
+      console.error("Registration Error:", err);
+      res.status(StatusCodes.BAD_REQUEST).json({ msg: err.message || "Invalid email or password" });
     }
   }
+  
 
   static async verifyEmail(req: Request, res: Response) {
     try {
@@ -57,8 +42,14 @@ export class AccountController {
     try {
       const { email, password} = req.body;
       const ipAddress = req.ip;
-      const result = await accountService.authenticate(email, password,ipAddress);
-      res.json(result);
+      
+      const {refreshToken, ...account} = await accountService.authenticate({email,password}, ipAddress);
+
+      await this.setTokenCookie(res, refreshToken);
+
+      res.json(account);
+
+
     } catch (err) {
       res.status(StatusCodes.UNAUTHORIZED).json({ msg: `Invalid email or password` });
     }
@@ -190,6 +181,14 @@ export class AccountController {
   }
 
 
+  static async setTokenCookie(res: any, token: string): Promise<void> {
+    const cookieOptions = {
+        httpOnly: true,
+        expires:  new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    };
+    res.cookie('refreshToken', token, cookieOptions);
+
+    }
 
 
 }

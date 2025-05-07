@@ -14,7 +14,7 @@ const router = Router();
 router.post("/authenticate", validate(authenticateSchema), AccountController.authenticate);
 router.post("/refresh-token", AccountController.refreshToken);
 router.post("/revoke-token", authorize(), AccountController.revokeToken);  // Fixed: Added missing slash
-router.post("/register", validate(registerSchema), AccountController.register);
+router.post("/register",validate(registerSchema)), AccountController.register);
 router.get("/verify-email", validate(verifyEmailSchema), AccountController.verifyEmail);
 router.post("/forgot-password", validate(forgotPasswordSchema), AccountController.forgotPassword);
 router.post("/validate-reset-token", validate(validateResetTokenSchema), AccountController.validateResetToken);
@@ -26,4 +26,9 @@ router.put("/:id", authorize(), validate(updateAccountSchema), AccountController
 router.delete("/:id", authorize(), AccountController.deleteAccount);
 
 export default router;
+
+
+
+
+
 
